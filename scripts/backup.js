@@ -6,41 +6,32 @@ var min_width = 1280*0.4;
 var min_height = 720*0.4;
 
 // https://github.com/pothonprogramming/pothonprogramming.github.io/blob/master/content/control/control.js
-var playerController = {
+var player = {
     left: false,
     right: false,
     up: false,
     down: false,
     is_jumping: false,
     spin_charge: 0,
-    looking_right: true,
-
-    x_acceleration: 0,
-    y_acceleration: 0,
-
-    x_velocity: 0,
-    y_velocity: 0,
-
-
-
     keyListener: function(event){
         var key_state = (event.type == "keydown") ? true : false;
+        
 
         switch(event.keyCode){
             case 65 || 37:// left key
-                playerController.left = key_state;
+                player.left = key_state;
             break;
             case 68 || 39:// right key
-                playerController.right = key_state;
+                player.right = key_state;
             break;
             case 32:// space key
-                playerController.up = key_state & !playerController.is_jumping;
-                if(playerController.down && key_state && playerController.spin_charge < 3){
-                    playerController.spin_charge += 1;
+                player.up = key_state & !player.is_jumping;
+                if(player.down && key_state && player.spin_charge < 3){
+                    player.spin_charge += 1;
                 }
             break;
             case 83 || 40:// down key
-                playerController.down = key_state;
+                player.down = key_state;
             break;
         }
         
@@ -76,8 +67,8 @@ boxObj.position.x = 3;
 
 var playerGeom = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
 var playerMaterial = new THREE.MeshLambertMaterial({color: 0x0033F7});
-var player = new THREE.Mesh(playerGeom, playerMaterial);
-scene.add(player);
+var playerObj = new THREE.Mesh(playerGeom, playerMaterial);
+scene.add(playerObj);
 
 
 var platformGeom = new THREE.BoxGeometry(10,1,2);
@@ -125,96 +116,95 @@ function resizeRenderer(){
 resizeRenderer();
 
 window.addEventListener("resize", resizeRenderer);
-window.addEventListener("keydown", playerController.keyListener)
-window.addEventListener("keyup", playerController.keyListener);
+window.addEventListener("keydown", player.keyListener)
+window.addEventListener("keyup", player.keyListener);
 
 
 
 
 
 // ----- Update ----- //
-var gravity = -0.002;
+var gravity = -0.98;
 var timestep = 1/60;
 var y_velocity = 0;
 var x_velocity = 0;
 var looking_right = 1;
 var walk_speed = 0.06;
-
 function update(){
-    // X Acceleration inputs
-    if(playerController.left){
-        playerController.looking_right = false;
-        if(playerController.x_velocity > 0){
-            playerController.x_acceleration = -0.02;
-        }
-        else{
-            playerController.x_acceleration = -0.003;
+    // 
+
+
+
+
+
+
+
+
+
+
+
+
+
+    if(player.left){
+        looking_right = -1;
+        if(!(!player.is_jumping && player.down)){
+            if(x_velocity < walk_speed){
+                x_velocity = walk_speed;
+            }
         }
     }
-    else if(playerController.right){
-        looking_right = true;
-        if(playerController.x_velocity < 0){
-            playerController.x_acceleration = 0.02;
+    else if(player.right){
+        looking_right = 1;
+        if(!(!player.is_jumping && player.down)){
+            if(x_velocity < walk_speed){
+                x_velocity = walk_speed;
+            }
         }
-        else{
-            playerController.x_acceleration = 0.003;
-        }
+    }
+    if(player.up && !player.is_jumping && !player.down){
+        player.is_jumping = true;
+        y_velocity = 0.08;
+    }
+    if(player.down){
+        if(player.is_jumping){
+            y_velocity -= 0.0018;
+        }        
     }
     else{
-        playerController.x_acceleration = 0;
-    }
-
-    // Y "Acceleration" inputs
-    if(playerController.up && !playerController.is_jumping){
-        playerController.y_velocity = 0.08;
-        playerController.is_jumping = true;
-    }
-    if(playerController.down){
-        playerController.y_acceleration = -0.002;
-    }
-    else{
-        playerController.y_acceleration = 0;
-    }
-
-    // Y velocity calc
-    if(player.position.y > 0 || playerController.y_velocity > 0){
-        playerController.y_velocity += gravity + playerController.y_acceleration;
-    }
-    else{
-        playerController.is_jumping = false
-        playerController.y_velocity = 0;
-        player.position.y = 0;
-    }
-
-    // X velocity calc
-    if((playerController.x_velocity <= walk_speed && playerController.x_velocity >= -walk_speed) ||
-        (playerController.x_velocity > 0 && playerController.x_acceleration < 0) || 
-        (playerController.x_velocity < 0 && playerController.x_acceleration > 0)){
-            playerController.x_velocity += playerController.x_acceleration;
-    }
-    else{
-        playerController.x_velocity = playerController.x_velocity;
-    }
-    if(playerController.x_acceleration == 0){
-        if (playerController.x_velocity > 0){
-            playerController.x_velocity -= 0.002;
+        if(player.spin_charge <= 2 && player.spin_charge > 0){
+            x_velocity = 0.1 * player.spin_charge;
         }
-        else if (playerController.x_velocity < 0){
-            playerController.x_velocity += 0.002;
+        else if (player.spin_charge > 2){
+            x_velocity = 0.1 * 3;
         }
-        if(playerController.x_velocity < 0.002 && playerController.x_velocity > -0.002){
-            playerController.x_velocity = 0;
+        player.spin_charge = 0;
+    }
+
+    function resizePlayer(spin_charge){
+        var tl = new TimelineMax();
+        tl.to(playerObj.scale, 1, {x:1, y:(10-spin_charge)/10, z:1, ease: Expo.easeOut})
+    }
+    resizePlayer(player.spin_charge);
+
+
+    playerObj.position.x += x_velocity * looking_right;
+    camera.position.x += x_velocity * looking_right;
+    if((x_velocity > 0 && (!player.left && !player.right)) || x_velocity > walk_speed){
+        x_velocity -= 0.003;
+        if(x_velocity < 0){
+            x_velocity = 0;
         }
     }
-    
-    
 
-    // player position update
-    player.position.x += playerController.x_velocity;
-    player.position.y += playerController.y_velocity;
-    
-    camera.position.x = player.position.x;
-
+    playerObj.position.y += y_velocity;
+    if(playerObj.position.y > 0){
+        y_velocity -= 0.0018;
+    }
+    else {
+        y_velocity = 0;
+        player.is_jumping = false;
+        playerObj.position.y = 0;
+    }
 
     boxObj.rotation.x += 0.005;
     boxObj.rotation.y += 0.01;
