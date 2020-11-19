@@ -21,8 +21,6 @@ var playerController = {
     x_velocity: 0,
     y_velocity: 0,
 
-
-
     keyListener: function(event){
         var key_state = (event.type == "keydown") ? true : false;
 
@@ -82,9 +80,14 @@ scene.add(player);
 
 var platformGeom = new THREE.BoxGeometry(10,1,2);
 var platformMaterial = new THREE.MeshLambertMaterial({color:0x000000});
-var platformObj = new THREE.Mesh(platformGeom, platformMaterial);
-scene.add(platformObj);
-platformObj.position.y = -1;
+var platform1 = new THREE.Mesh(platformGeom, platformMaterial);
+scene.add(platform1);
+platform1.position.y = -1;
+var platform2 = new THREE.Mesh(platformGeom, platformMaterial);
+scene.add(platform2);
+platform2.position.y = 0;
+platform2.position.x = 12;
+
 
 var world = new THREE.SphereGeometry(20, 32, 32);
 var worldMaterial = new THREE.MeshBasicMaterial({color: 0x00AA33});
@@ -93,8 +96,8 @@ scene.add(worldMesh);
 worldMesh.position.y = -20;
 worldMesh.position.z = -10;
 
-var dynamicObjects = [];
-
+var dynamicObjects = [player];
+var platformsArray = [platform1, platform2];
 
 
 // ----- Renderer ----- //
@@ -124,20 +127,28 @@ function resizeRenderer(){
 }
 resizeRenderer();
 
+
+// ----- Event Listeners ----- //
 window.addEventListener("resize", resizeRenderer);
 window.addEventListener("keydown", playerController.keyListener)
 window.addEventListener("keyup", playerController.keyListener);
 
 
-
-
+// ----- Collision Detection ----- //
+function collisionDetection(){
+    for(var i=0; i < platformsArray.length; i++){
+        if(player.position.y - 0.5 - 0.5 < platformsArray[i].position.y &&
+            player.position.x > platformsArray[i].position.x - 5 - 0.5 &&
+            player.position.x < platformsArray[i].position.x + 5 + 0.5 &&
+            player.position.y + 0.5 + 0.5 > platformsArray[i].position.y){
+            return true;
+        }
+    }
+    return false;
+}
 
 // ----- Update ----- //
 var gravity = -0.002;
-var timestep = 1/60;
-var y_velocity = 0;
-var x_velocity = 0;
-var looking_right = 1;
 var walk_speed = 0.06;
 
 function update(){
@@ -152,7 +163,7 @@ function update(){
         }
     }
     else if(playerController.right){
-        looking_right = true;
+        playerController.looking_right = true;
         if(playerController.x_velocity < 0){
             playerController.x_acceleration = 0.02;
         }
@@ -176,14 +187,14 @@ function update(){
         playerController.y_acceleration = 0;
     }
 
+
     // Y velocity calc
-    if(player.position.y > 0 || playerController.y_velocity > 0){
+    if(!collisionDetection() || playerController.y_velocity > 0){
         playerController.y_velocity += gravity + playerController.y_acceleration;
     }
     else{
         playerController.is_jumping = false
         playerController.y_velocity = 0;
-        player.position.y = 0;
     }
 
     // X velocity calc
