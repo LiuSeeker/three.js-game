@@ -173,7 +173,7 @@ async function main(){
         scene.add(ambient_light);
 
         // ----- Player ----- //
-        player = new THREE.Mesh(boxGeom, playerMaterial);
+        player = new THREE.Mesh(playerGeom, playerMaterial);
         scene.add(player);
 
         // ----- BG ----- //
@@ -216,6 +216,9 @@ async function main(){
 
     function collisionDetection(){
         var originPoint = player.position.clone();
+        playerController.collision_left=false;
+        playerController.collision_right=false;
+        playerController.collision_ground=false;
        
     
         for (var vertexIndex = 0; vertexIndex < player.geometry.vertices.length; vertexIndex++)
@@ -226,17 +229,18 @@ async function main(){
             
             var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
             var collisionResults = ray.intersectObjects( platformsobjects );
-            if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()){
-                //console.log(ray.ray.direction)
-                if(ray.ray.direction.x>0){
+            if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()){
+                console.log(ray.ray.direction)
+                if(collisionResults[0].faceIndex ==5){
                    playerController.collision_ground=true;
+                   //console.log("grounded");
                 }
                 if(ray.ray.direction.x<0){
                     //console.log("Left collision");
                     playerController.collision_left=true;
                 }
             
-                if(collisionResults[0].faceIndex==2){
+                if(ray.ray.direction.x>0){
                     //console.log("Right collision");
                     playerController.collision_right=true;
                 }
@@ -244,8 +248,7 @@ async function main(){
                 return true}	
                 }
 
-        playerController.collision_left=false;
-        playerController.collision_right=false;
+        
         return false;
        
 
