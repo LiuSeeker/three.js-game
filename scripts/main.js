@@ -22,6 +22,10 @@ async function main(){
         x_velocity: 0,
         y_velocity: 0,
 
+        collision_right:false,
+        collision_left:false,
+        collision_ground:false,
+
         keyListener: function(event){
             var key_state = (event.type == "keydown") ? true : false;
 
@@ -73,6 +77,9 @@ async function main(){
     var bgGeom = new THREE.SphereGeometry(20, 32, 32);
     var bgMaterial = new THREE.MeshBasicMaterial({color: 0x00AA33});
 
+
+    
+
     // ----- Objects arrays ----- //
     var platformsobjects = []
     var dynamicObjects = []
@@ -99,6 +106,7 @@ async function main(){
             newObj = new THREE.Mesh(boxGeom, boxMaterial);
             scene.add(newObj);
             animatedObjects.push(newObj);
+            platformsobjects.push(newObj);
         }
         else if(obj.type == "platform"){
             newObj = new THREE.Mesh(platformGeom, platformMaterial);
@@ -134,6 +142,9 @@ async function main(){
             playerController.y_acceleration = 0;
             playerController.x_velocity = 0;
             playerController.y_velocity = 0;
+            platformsobjects=[];
+            animatedObjects=[];
+            dynamicObjects=[];
         }
         else{
             first_load = false;
@@ -162,7 +173,7 @@ async function main(){
         scene.add(ambient_light);
 
         // ----- Player ----- //
-        player = new THREE.Mesh(playerGeom, playerMaterial);
+        player = new THREE.Mesh(boxGeom, playerMaterial);
         scene.add(player);
 
         // ----- BG ----- //
@@ -191,7 +202,7 @@ async function main(){
     }
 
     // ----- Collision Detection ----- //
-    function collisionDetection(){
+    function collisionDetection2(){
         for(var i=0; i < platformsobjects.length; i++){
             if(player.position.y - 0.5 - 0.5 < platformsobjects[i].position.y &&
                 player.position.x > platformsobjects[i].position.x - 5 - 0.5 &&
@@ -202,6 +213,45 @@ async function main(){
         }
         return false;
     }
+
+    function collisionDetection(){
+        var originPoint = player.position.clone();
+       
+    
+        for (var vertexIndex = 0; vertexIndex < player.geometry.vertices.length; vertexIndex++)
+        {		
+            var localVertex = player.geometry.vertices[vertexIndex].clone();
+            var globalVertex = localVertex.applyMatrix4( player.matrix );
+            var directionVector = globalVertex.sub( player.position );
+            
+            var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
+            var collisionResults = ray.intersectObjects( platformsobjects );
+            if ( collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()){
+                //console.log(ray.ray.direction)
+                if(ray.ray.direction.x>0){
+                   playerController.collision_ground=true;
+                }
+                if(ray.ray.direction.x<0){
+                    //console.log("Left collision");
+                    playerController.collision_left=true;
+                }
+            
+                if(collisionResults[0].faceIndex==2){
+                    //console.log("Right collision");
+                    playerController.collision_right=true;
+                }
+                //console.log(collisionResults[0].uv.x-player.position.x);
+                return true}	
+                }
+
+        playerController.collision_left=false;
+        playerController.collision_right=false;
+        return false;
+       
+
+        } 
+
+               
 
     // ----- Goal Detection ----- //
     function goalDetection(){
@@ -245,6 +295,7 @@ async function main(){
 
     // ----- Update -----//
     async function update(){
+        //console.log(playerController.collision_right);
         // X Acceleration inputs
         if(playerController.left){
             playerController.looking_right = false;
@@ -256,6 +307,7 @@ async function main(){
             }
         }
         else if(playerController.right){
+            //console.log(playerController.collision_right);
             playerController.looking_right = true;
             if(playerController.x_velocity < 0){
                 playerController.x_acceleration = 0.02;
@@ -281,6 +333,7 @@ async function main(){
         }
 
         // Y velocity calc
+
         if(!collisionDetection() || playerController.y_velocity > 0){
             playerController.y_velocity += gravity + playerController.y_acceleration;
         }
@@ -290,14 +343,22 @@ async function main(){
         }
 
         // X velocity calc
+        if(playerController.x_acceleration>0 && playerController.collision_right){
+            playerController.x_acceleration=0;
+            playerController.x_velocity=0;
+        }
+        if(playerController.x_acceleration<0 && playerController.collision_left){
+            playerController.x_acceleration=0;
+            playerController.x_velocity=0;
+        }
+
+
         if((playerController.x_velocity <= walk_speed && playerController.x_velocity >= -walk_speed) ||
             (playerController.x_velocity > 0 && playerController.x_acceleration < 0) || 
             (playerController.x_velocity < 0 && playerController.x_acceleration > 0)){
                 playerController.x_velocity += playerController.x_acceleration;
         }
-        else{
-            playerController.x_velocity = playerController.x_velocity;
-        }
+       
         if(playerController.x_acceleration == 0){
             if (playerController.x_velocity > 0){
                 playerController.x_velocity -= 0.002;
@@ -324,6 +385,7 @@ async function main(){
         }
 
         // Ver se o player chegou no objetivo
+       
         if(goalDetection()){
             actual_level++;
             await loadLevel(actual_level);
@@ -340,4 +402,5 @@ async function main(){
 
 
     update();
+    
 }
