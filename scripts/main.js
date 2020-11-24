@@ -1,3 +1,10 @@
+//import Stats from './stats.module.js';
+
+//import { FBXLoader } from './FBXLoader.js';
+
+import * as THREE from "../three.js-master/src/Three.js"
+import { FBXLoader } from '../three.js-master/examples/jsm/loaders/FBXLoader.js'
+
 main();
 
 async function main(){
@@ -61,6 +68,12 @@ async function main(){
         }
     }
 
+    function modelLoader(path){
+        return new Promise((resolve,reject) =>{
+            loader.load(path, data => resolve(data), null, reject);
+        })
+    }
+
     // ----- Geoms and Materials ----- //
     var boxGeom = new THREE.BoxGeometry(0.6,0.6,0.6);
     var boxMaterial = new THREE.MeshLambertMaterial({color: 0xF700F7});
@@ -86,6 +99,7 @@ async function main(){
     brickTexture.repeat.set( 2, 0.25 );
     const brickMaterial = new THREE.MeshBasicMaterial( { map: brickTexture } );
 
+    const loadManager = new THREE.LoadingManager();
     // var loader = new FBXLoader();
     // var ringObj = loader.load("models/ring.fbx");
     
@@ -111,14 +125,15 @@ async function main(){
     var actual_level = 0;
     var t_counter = 0;
     var enemy_direction = 1;
+    var loader = new FBXLoader();
 
-    function createObj(obj){
+    async function createObj(obj){
         // Função que cria os objetos baseado no .json
         var newObj;
         if(obj.type == "box"){
             newObj = new THREE.Mesh(boxGeom, boxMaterial);
             scene.add(newObj);
-            animatedObjects.push(newObj);
+            //animatedObjects.push(newObj);
             platformsobjects.push(newObj);
         }
         else if(obj.type == "platform"){
@@ -127,18 +142,29 @@ async function main(){
             platformsobjects.push(newObj);
         }
         else if(obj.type == "goal"){
-            newObj = new THREE.Mesh(goalGeom, goalMaterial);
+            // newObj = new THREE.Mesh(goalGeom, goalMaterial);
+            // scene.add(newObj);
+            // goal = newObj;
+
+            newObj = await modelLoader("./models/ring.fbx");
+            
             scene.add(newObj);
-            goal = newObj;
+            animatedObjects.push(newObj);
         }
         else if(obj.type == "enemy"){
-            newObj = new THREE.Mesh(enemyGeom, enemyMaterial);
+            newObj = await modelLoader("./models/Spiny.fbx");
+            newObj.scale.set(0.01, 0.01, 0.01);
+            newObj.rotation.y += Math.PI/2;
             scene.add(newObj);
             enemyObjects.push(newObj);
         }
 
         newObj.position.x = obj.posX;
         newObj.position.y = obj.posY;
+
+        if(obj.type == "goal"){
+            goal = newObj;
+        }
 
     }
 
@@ -160,6 +186,11 @@ async function main(){
             playerController.y_acceleration = 0;
             playerController.x_velocity = 0;
             playerController.y_velocity = 0;
+            playerController.right = false;
+            playerController.up = false;
+            playerController.left = false;
+            playerController.down = false;
+            
             platformsobjects=[];
             animatedObjects=[];
             dynamicObjects=[];
@@ -176,7 +207,7 @@ async function main(){
 
         // ----- Camera ----- //
         camera = new THREE.PerspectiveCamera(
-            75, //fov
+            70, //fov
             aspect_ratio, //aspect ratio
             0.1, //near far plane
             1000 // ?
@@ -188,6 +219,7 @@ async function main(){
         // ----- Lights ----- //
         light = new THREE.PointLight(0xFFFFFF, 0.8, 500)
         light.position.set(0,10,25);
+        light.castShadow = true;
         scene.add(light);
 
         ambient_light = new THREE.AmbientLight(0x707070, 0.6)
@@ -204,16 +236,16 @@ async function main(){
         bg.position.z = -10;
 
         // ----- Load e criação de objetos
-        var file_name = "../level".concat(n.toString(), ".json");
+        var file_name = "../levels/level".concat(n.toString(), ".json");
         var level_data = await getData(file_name);
         if(level_data == -1){
             actual_level = 0;
-            file_name = "../level".concat("0", ".json");
+            file_name = "../levels/level".concat("0", ".json");
             level_data = await getData(file_name);
         }
 
         for(var i=0; i < level_data.objects.length; i++){
-            createObj(level_data.objects[i]);
+            await createObj(level_data.objects[i]);
         }
 
         // ----- Event Listeners ----- //
@@ -251,7 +283,7 @@ async function main(){
             var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
             var collisionResults = ray.intersectObjects( objectsArray );
             if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()){
-                console.log(ray.ray.direction)
+                //console.log(ray.ray.direction)
                 if(collisionResults[0].faceIndex ==5){
                    playerController.collision_ground=true;
                    //console.log("grounded");
@@ -283,9 +315,9 @@ async function main(){
         }
     }
 
+    // ----- Renderer ----- //
     await loadLevel(actual_level); // Load da camera antes do render
 
-    // ----- Renderer ----- //
     var renderer = new THREE.WebGLRenderer({antialias: true});
     renderer.setClearColor("#404040");
     renderer.setSize(1280, 720);
@@ -399,10 +431,10 @@ async function main(){
         camera.position.x = player.position.x;
 
         // Rotate animated objects
-        // for(var i=0; i< animatedObjects.length; i++){
-        //     animatedObjects[i].rotation.x += 0.005;
-        //     animatedObjects[i].rotation.y += 0.01;
-        // }
+        for(var i=0; i< animatedObjects.length; i++){
+            //animatedObjects[i].rotation.x += 0.005;
+            animatedObjects[i].rotation.y += 0.04;
+        }
 
         for(var j=0; j < enemyObjects.length; j++){
             enemyObjects[j].position.x += 0.01 * enemy_direction;
@@ -426,6 +458,10 @@ async function main(){
         if(t_counter > 400){
             t_counter = 0;
             enemy_direction = enemy_direction * -1;
+            for(var j=0; j < enemyObjects.length; j++){
+                enemyObjects[j].rotation.y += Math.PI * enemy_direction;
+            }
+            
         }
 
         // Atualização do render e frame
