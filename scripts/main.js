@@ -75,15 +75,26 @@ async function main(){
     var platformMaterial = new THREE.MeshLambertMaterial({color:0x000000});
 
     var bgGeom = new THREE.SphereGeometry(20, 32, 32);
-    var bgMaterial = new THREE.MeshBasicMaterial({color: 0x00AA33});
+    var bgMaterial = new THREE.MeshLambertMaterial({color: 0x00AA33});
 
+    var enemyGeom = new THREE.ConeGeometry(0.3, 0.75, 32);
+    var enemyMaterial = new THREE.MeshLambertMaterial({color:0xBB0000});
 
+    const brickTexture = new THREE.TextureLoader().load( 'textures/brick.png' );
+    brickTexture.wrapS = THREE.RepeatWrapping;
+    brickTexture.wrapT = THREE.RepeatWrapping;
+    brickTexture.repeat.set( 2, 0.25 );
+    const brickMaterial = new THREE.MeshBasicMaterial( { map: brickTexture } );
+
+    // var loader = new FBXLoader();
+    // var ringObj = loader.load("models/ring.fbx");
     
 
     // ----- Objects arrays ----- //
-    var platformsobjects = []
-    var dynamicObjects = []
-    var animatedObjects = []
+    var platformsobjects = [];
+    var dynamicObjects = [];
+    var enemyObjects = [];
+    var animatedObjects = [];
 
     // ----- "Global" objects ----- //
     var scene = null;
@@ -98,6 +109,8 @@ async function main(){
     var gravity = -0.002;
     var walk_speed = 0.06;
     var actual_level = 0;
+    var t_counter = 0;
+    var enemy_direction = 1;
 
     function createObj(obj){
         // Função que cria os objetos baseado no .json
@@ -109,7 +122,7 @@ async function main(){
             platformsobjects.push(newObj);
         }
         else if(obj.type == "platform"){
-            newObj = new THREE.Mesh(platformGeom, platformMaterial);
+            newObj = new THREE.Mesh(platformGeom, brickMaterial);
             scene.add(newObj);
             platformsobjects.push(newObj);
         }
@@ -117,6 +130,11 @@ async function main(){
             newObj = new THREE.Mesh(goalGeom, goalMaterial);
             scene.add(newObj);
             goal = newObj;
+        }
+        else if(obj.type == "enemy"){
+            newObj = new THREE.Mesh(enemyGeom, enemyMaterial);
+            scene.add(newObj);
+            enemyObjects.push(newObj);
         }
 
         newObj.position.x = obj.posX;
@@ -145,6 +163,9 @@ async function main(){
             platformsobjects=[];
             animatedObjects=[];
             dynamicObjects=[];
+            enemyObjects=[];
+            t_counter = 0;
+            enemy_direction=1;
         }
         else{
             first_load = false;
@@ -202,19 +223,19 @@ async function main(){
     }
 
     // ----- Collision Detection ----- //
-    function collisionDetection2(){
-        for(var i=0; i < platformsobjects.length; i++){
-            if(player.position.y - 0.5 - 0.5 < platformsobjects[i].position.y &&
-                player.position.x > platformsobjects[i].position.x - 5 - 0.5 &&
-                player.position.x < platformsobjects[i].position.x + 5 + 0.5 &&
-                player.position.y + 0.5 + 0.5 > platformsobjects[i].position.y){
-                return true;
-            }
-        }
-        return false;
-    }
+    // function collisionDetection2(){
+    //     for(var i=0; i < platformsobjects.length; i++){
+    //         if(player.position.y - 0.5 - 0.5 < platformsobjects[i].position.y &&
+    //             player.position.x > platformsobjects[i].position.x - 5 - 0.5 &&
+    //             player.position.x < platformsobjects[i].position.x + 5 + 0.5 &&
+    //             player.position.y + 0.5 + 0.5 > platformsobjects[i].position.y){
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
 
-    function collisionDetection(){
+    function collisionDetection(objectsArray){
         var originPoint = player.position.clone();
         playerController.collision_left=false;
         playerController.collision_right=false;
@@ -228,7 +249,7 @@ async function main(){
             var directionVector = globalVertex.sub( player.position );
             
             var ray = new THREE.Raycaster( originPoint, directionVector.clone().normalize() );
-            var collisionResults = ray.intersectObjects( platformsobjects );
+            var collisionResults = ray.intersectObjects( objectsArray );
             if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()){
                 console.log(ray.ray.direction)
                 if(collisionResults[0].faceIndex ==5){
@@ -250,11 +271,7 @@ async function main(){
 
         
         return false;
-       
-
-        } 
-
-               
+    } 
 
     // ----- Goal Detection ----- //
     function goalDetection(){
@@ -295,7 +312,7 @@ async function main(){
     }
     resizeRenderer();
     window.addEventListener("resize", resizeRenderer);
-
+    
     // ----- Update -----//
     async function update(){
         //console.log(playerController.collision_right);
@@ -337,7 +354,7 @@ async function main(){
 
         // Y velocity calc
 
-        if(!collisionDetection() || playerController.y_velocity > 0){
+        if(!collisionDetection(platformsobjects) || playerController.y_velocity > 0){
             playerController.y_velocity += gravity + playerController.y_acceleration;
         }
         else{
@@ -382,25 +399,38 @@ async function main(){
         camera.position.x = player.position.x;
 
         // Rotate animated objects
-        for(var i=0; i< animatedObjects.length; i++){
-            animatedObjects[i].rotation.x += 0.005;
-            animatedObjects[i].rotation.y += 0.01;
+        // for(var i=0; i< animatedObjects.length; i++){
+        //     animatedObjects[i].rotation.x += 0.005;
+        //     animatedObjects[i].rotation.y += 0.01;
+        // }
+
+        for(var j=0; j < enemyObjects.length; j++){
+            enemyObjects[j].position.x += 0.01 * enemy_direction;
+        }
+
+        if(collisionDetection(enemyObjects)){
+            await loadLevel(actual_level);
         }
 
         // Ver se o player chegou no objetivo
-       
         if(goalDetection()){
             actual_level++;
             await loadLevel(actual_level);
         }
-        else if(player.position.y < -10){
+
+        if(player.position.y < -10){
             await loadLevel(actual_level);
+        }
+
+        t_counter++;
+        if(t_counter > 400){
+            t_counter = 0;
+            enemy_direction = enemy_direction * -1;
         }
 
         // Atualização do render e frame
         renderer.render(scene, camera);
         frame_id = requestAnimationFrame(function(){update();});
-        
     }
 
 

@@ -19,6 +19,11 @@
             "type": "goal",
             "posX": 16,
             "posY": 1
+        },
+        {
+            "type": "enemy",
+            "posX": 10,
+            "posY": 0.75
         }
     ]
 }
