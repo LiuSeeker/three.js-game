@@ -4,6 +4,7 @@
 
 import * as THREE from "../three.js-master/src/Three.js"
 import { FBXLoader } from '../three.js-master/examples/jsm/loaders/FBXLoader.js'
+import { AlphaFormat } from "../three.js-master/src/Three.js";
 
 main();
 
@@ -109,6 +110,7 @@ async function main(){
     var dynamicObjects = [];
     var enemyObjects = [];
     var animatedObjects = [];
+    var colliderObjects=[];
 
     // ----- "Global" objects ----- //
     var scene = null;
@@ -155,8 +157,10 @@ async function main(){
             newObj = await modelLoader("./models/Spiny.fbx");
             newObj.scale.set(0.01, 0.01, 0.01);
             newObj.rotation.y += Math.PI/2;
+            loadCollider(newObj.scale.x,newObj.scale.y,newObj.scale.z,obj.posX,obj.posY);
             scene.add(newObj);
             enemyObjects.push(newObj);
+
         }
 
         newObj.position.x = obj.posX;
@@ -167,6 +171,20 @@ async function main(){
         }
 
     }
+
+    async function loadCollider(Scalex,Scaley,Scalez,Posx,Posy){
+        var newObj;
+        var colliderGeom = new THREE.BoxGeometry(0.8,1.2,0.8);
+        var colliderMaterial = new THREE.MeshPhongMaterial({color: 0xF700F7,opacity:0 ,transparent:true});
+        newObj = new THREE.Mesh(colliderGeom, colliderMaterial);
+            scene.add(newObj);
+            colliderObjects.push(newObj);
+        newObj.position.x = Posx;
+        newObj.position.y = Posy;
+    }
+
+
+
 
     async function loadLevel(n){
         // Função para carregar o level
@@ -194,6 +212,7 @@ async function main(){
             platformsobjects=[];
             animatedObjects=[];
             dynamicObjects=[];
+            colliderObjects=[];
             enemyObjects=[];
             t_counter = 0;
             enemy_direction=1;
@@ -438,9 +457,10 @@ async function main(){
 
         for(var j=0; j < enemyObjects.length; j++){
             enemyObjects[j].position.x += 0.01 * enemy_direction;
+            colliderObjects[j].position.x+=0.01 * enemy_direction;
         }
 
-        if(collisionDetection(enemyObjects)){
+        if(collisionDetection(colliderObjects)){
             await loadLevel(actual_level);
         }
 
