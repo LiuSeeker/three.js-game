@@ -2,17 +2,17 @@
     "objects": [
         {
             "type": "platform",
-            "posX": 4,
+            "posX": 0,
             "posY": -1
         },
         {
             "type": "platform",
-            "posX": 10,
-            "posY": 0
+            "posX": 16,
+            "posY": -1
         },
         {
             "type": "goal",
-            "posX": 14,
+            "posX": 24,
             "posY": 1
         }
     ]

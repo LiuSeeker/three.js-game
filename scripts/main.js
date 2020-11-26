@@ -1,10 +1,5 @@
-//import Stats from './stats.module.js';
-
-//import { FBXLoader } from './FBXLoader.js';
-
 import * as THREE from "../three.js-master/src/Three.js"
 import { FBXLoader } from '../three.js-master/examples/jsm/loaders/FBXLoader.js'
-import { AlphaFormat } from "../three.js-master/src/Three.js";
 
 main();
 
@@ -76,7 +71,7 @@ async function main(){
     }
 
     // ----- Geoms and Materials ----- //
-    var boxGeom = new THREE.BoxGeometry(0.6,0.6,0.6);
+    var boxGeom = new THREE.BoxGeometry(1,1,1);
     var boxMaterial = new THREE.MeshLambertMaterial({color: 0xF700F7});
 
     var goalGeom = new THREE.SphereGeometry(0.3, 32, 32);
@@ -88,8 +83,9 @@ async function main(){
     var platformGeom = new THREE.BoxGeometry(10,1,2);
     var platformMaterial = new THREE.MeshLambertMaterial({color:0x000000});
 
-    var bgGeom = new THREE.SphereGeometry(20, 32, 32);
-    var bgMaterial = new THREE.MeshLambertMaterial({color: 0x00AA33});
+    var bgGeom = new THREE.BoxGeometry(30, 30, 1);
+    const bgTexture = new THREE.TextureLoader().load( '../textures/bg.png' );
+    const bgMaterial = new THREE.MeshBasicMaterial( { map: bgTexture } );  
 
     var enemyGeom = new THREE.ConeGeometry(0.3, 0.75, 32);
     var enemyMaterial = new THREE.MeshLambertMaterial({color:0xBB0000});
@@ -98,12 +94,14 @@ async function main(){
     brickTexture.wrapS = THREE.RepeatWrapping;
     brickTexture.wrapT = THREE.RepeatWrapping;
     brickTexture.repeat.set( 2, 0.25 );
-    const brickMaterial = new THREE.MeshBasicMaterial( { map: brickTexture } );
+    const brickMaterial = new THREE.MeshBasicMaterial( { map: brickTexture } );    
 
-    const loadManager = new THREE.LoadingManager();
-    // var loader = new FBXLoader();
-    // var ringObj = loader.load("models/ring.fbx");
-    
+    const brickTexture2 = new THREE.TextureLoader().load( 'textures/brick.png' );
+    brickTexture2.wrapS = THREE.RepeatWrapping;
+    brickTexture2.wrapT = THREE.RepeatWrapping;
+    brickTexture2.repeat.set( 0.4, 0.4 );
+    const brickMaterial2 = new THREE.MeshBasicMaterial( { map: brickTexture2 } );    
+
 
     // ----- Objects arrays ----- //
     var platformsobjects = [];
@@ -111,6 +109,7 @@ async function main(){
     var enemyObjects = [];
     var animatedObjects = [];
     var colliderObjects=[];
+    var BGObjects = [];
 
     // ----- "Global" objects ----- //
     var scene = null;
@@ -120,6 +119,8 @@ async function main(){
     var player = null;
     var goal = null;
     var bg = null;
+    var bg2= null;
+    var bg3= null;
     var first_load = true;
     var frame_id;
     var gravity = -0.002;
@@ -133,9 +134,8 @@ async function main(){
         // Função que cria os objetos baseado no .json
         var newObj;
         if(obj.type == "box"){
-            newObj = new THREE.Mesh(boxGeom, boxMaterial);
+            newObj = new THREE.Mesh(boxGeom, brickMaterial2);
             scene.add(newObj);
-            //animatedObjects.push(newObj);
             platformsobjects.push(newObj);
         }
         else if(obj.type == "platform"){
@@ -144,10 +144,6 @@ async function main(){
             platformsobjects.push(newObj);
         }
         else if(obj.type == "goal"){
-            // newObj = new THREE.Mesh(goalGeom, goalMaterial);
-            // scene.add(newObj);
-            // goal = newObj;
-
             newObj = await modelLoader("./models/ring.fbx");
             
             scene.add(newObj);
@@ -214,6 +210,8 @@ async function main(){
             dynamicObjects=[];
             colliderObjects=[];
             enemyObjects=[];
+            BGObjects=[];
+
             t_counter = 0;
             enemy_direction=1;
         }
@@ -251,8 +249,23 @@ async function main(){
         // ----- BG ----- //
         bg = new THREE.Mesh(bgGeom, bgMaterial);
         scene.add(bg);
-        bg.position.y = -20;
+        bg.rotation.x = -Math.PI/10;
         bg.position.z = -10;
+        BGObjects.push(bg);
+
+        bg2 = new THREE.Mesh(bgGeom, bgMaterial);
+        scene.add(bg2);
+        bg2.rotation.x = -Math.PI/10;
+        bg2.position.x = 30;
+        bg2.position.z = -10;
+        BGObjects.push(bg2);
+
+        bg3 = new THREE.Mesh(bgGeom, bgMaterial);
+        scene.add(bg3);
+        bg3.rotation.x = -Math.PI/10;
+        bg3.position.x = -30;
+        bg3.position.z = -10;
+        BGObjects.push(bg3);
 
         // ----- Load e criação de objetos
         var file_name = "../levels/level".concat(n.toString(), ".json");
@@ -335,6 +348,7 @@ async function main(){
     }
 
     // ----- Renderer ----- //
+    await loadLevel(actual_level); // Load da camera antes do render
     await loadLevel(actual_level); // Load da camera antes do render
 
     var renderer = new THREE.WebGLRenderer({antialias: true});
@@ -448,6 +462,15 @@ async function main(){
         player.position.y += playerController.y_velocity;
         
         camera.position.x = player.position.x;
+
+        for(var k=0; k < BGObjects.length; k++){
+            if(camera.position.x - BGObjects[k].position.x < -46){
+                BGObjects[k].position.x -= 90;
+            }
+            if(camera.position.x - BGObjects[k].position.x > 46){
+                BGObjects[k].position.x += 90;
+            }
+        }
 
         // Rotate animated objects
         for(var i=0; i< animatedObjects.length; i++){

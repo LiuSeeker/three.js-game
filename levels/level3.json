@@ -1,0 +1,39 @@
+{
+    "objects": [
+        {
+            "type": "platform",
+            "posX": 4,
+            "posY": -1
+        },
+        {
+            "type": "platform",
+            "posX": 8,
+            "posY": 0
+        },
+        {
+            "type": "platform",
+            "posX": 10,
+            "posY": 1
+        },
+        {
+            "type": "platform",
+            "posX": 12,
+            "posY": 2
+        },
+        {
+            "type": "platform",
+            "posX": 28,
+            "posY": -1
+        },
+        {
+            "type": "goal",
+            "posX": 30,
+            "posY": 1
+        },
+        {
+            "type": "enemy",
+            "posX": 26,
+            "posY": -0.5
+        }
+    ]
+}

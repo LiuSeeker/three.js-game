@@ -6,19 +6,19 @@
             "posY": -1
         },
         {
-            "type": "box",
-            "posX": 3,
-            "posY": 0
-        },
-        {
             "type": "platform",
             "posX": -12,
             "posY": 0
         },
         {
             "type": "goal",
-            "posX": -15,
-            "posY": 2
+            "posX": -16,
+            "posY": 1
+        },
+        {
+            "type": "enemy",
+            "posX": -13,
+            "posY": 0.5
         }
     ]
 }
